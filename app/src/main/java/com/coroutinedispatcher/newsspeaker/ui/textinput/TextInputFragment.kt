@@ -87,7 +87,7 @@ class TextInputFragment : Fragment() {
                                     content = contentText.value
                                 )
                             }
-                        ),
+                        )
                     )
                     OutlinedTextField(
                         modifier = Modifier
@@ -109,7 +109,7 @@ class TextInputFragment : Fragment() {
                                     title = titleText.value
                                 )
                             }
-                        ),
+                        )
                     )
                     Box(
                         modifier = Modifier
@@ -166,7 +166,7 @@ class TextInputFragment : Fragment() {
             .setTitle("Title missing")
             .setMessage(
                 "There is not title set for this project. Please set a title to continue" +
-                        " recording."
+                    " recording."
             )
             .setPositiveButton("OK") { dialog, _ ->
                 dialog.dismiss()
@@ -179,7 +179,7 @@ class TextInputFragment : Fragment() {
             .setTitle("Content missing")
             .setMessage(
                 "There is not title set for this project. Please set a title to continue" +
-                        " recording."
+                    " recording."
             )
             .setPositiveButton("OK") { dialog, _ ->
                 dialog.dismiss()

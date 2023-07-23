@@ -22,7 +22,6 @@ interface ProjectDao {
     @Delete
     suspend fun delete(project: Project)
 
-
     @Query("SELECT * FROM project WHERE id=:pId")
     suspend fun getProject(pId: Long): Project
 }

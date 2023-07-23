@@ -1,10 +1,7 @@
 package com.coroutinedispatcher.newsspeaker.ui.theme
 
 import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import android.os.Build
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -17,7 +14,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import dagger.hilt.android.qualifiers.ActivityContext
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -47,7 +43,7 @@ fun NewsSpeakerTheme(
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     activityContext: Activity,
-    content: @Composable () -> Unit,
+    content: @Composable () -> Unit
 ) {
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
