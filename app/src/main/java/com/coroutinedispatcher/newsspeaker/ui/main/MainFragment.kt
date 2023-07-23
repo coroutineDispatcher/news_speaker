@@ -56,6 +56,7 @@ class MainFragment : Fragment() {
                             onClick = {
                                 requireActivity().supportFragmentManager
                                     .beginTransaction()
+                                    .addToBackStack(TextInputFragment.TAG)
                                     .replace(R.id.container, TextInputFragment.newInstance())
                                     .commit()
                             },

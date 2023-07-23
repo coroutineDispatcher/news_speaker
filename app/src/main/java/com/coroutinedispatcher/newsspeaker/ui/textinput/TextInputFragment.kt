@@ -18,7 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction.Companion.Next
 import androidx.compose.ui.unit.dp
@@ -31,7 +30,7 @@ class TextInputFragment : Fragment() {
         super.onCreate(savedInstanceState)
     }
 
-    @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -97,5 +96,6 @@ class TextInputFragment : Fragment() {
 
     companion object {
         fun newInstance() = TextInputFragment()
+        val TAG = "TextInputFragment"
     }
 }
