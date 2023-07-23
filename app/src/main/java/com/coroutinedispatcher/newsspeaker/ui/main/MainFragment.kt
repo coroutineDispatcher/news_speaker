@@ -28,7 +28,7 @@ import com.coroutinedispatcher.newsspeaker.ui.theme.NewsSpeakerTheme
 class MainFragment : Fragment() {
 
     private lateinit var viewModel: MainViewModel
-    private val binding: FragmentMainBinding? = null
+    private var mainFragmentBinding: FragmentMainBinding? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,9 +40,9 @@ class MainFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val view = FragmentMainBinding.inflate(inflater, container, false)
+        mainFragmentBinding = FragmentMainBinding.inflate(inflater, container, false)
 
-        view.composeView.setContent {
+        requireNotNull(mainFragmentBinding).composeView.setContent {
             NewsSpeakerTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -76,7 +76,12 @@ class MainFragment : Fragment() {
             }
         }
 
-        return view.root
+        return requireNotNull(mainFragmentBinding).root
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mainFragmentBinding = null
     }
 
     companion object {

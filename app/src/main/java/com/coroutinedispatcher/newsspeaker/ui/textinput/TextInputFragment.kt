@@ -1,5 +1,6 @@
 package com.coroutinedispatcher.newsspeaker.ui.textinput
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -22,13 +23,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction.Companion.Next
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.commit
+import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentTextInputBinding
+import com.coroutinedispatcher.newsspeaker.ui.camera.CameraFragment
 import com.coroutinedispatcher.newsspeaker.ui.theme.NewsSpeakerTheme
 
 class TextInputFragment : Fragment() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
+
+    private var textInputBinding: FragmentTextInputBinding? = null
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreateView(
@@ -36,9 +39,9 @@ class TextInputFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val binding = FragmentTextInputBinding.inflate(inflater, container, false)
+        textInputBinding = FragmentTextInputBinding.inflate(inflater, container, false)
 
-        binding.textInputComposable.setContent {
+        requireNotNull(textInputBinding).textInputComposable.setContent {
             val titleText = remember { mutableStateOf("") }
             val contentText = remember { mutableStateOf("") }
 
@@ -82,7 +85,27 @@ class TextInputFragment : Fragment() {
                             .padding(16.dp)
                     ) {
                         ElevatedButton(
-                            onClick = { /*TODO*/ },
+                            onClick = {
+                                if (titleText.value.isEmpty() || titleText.value.isBlank()) {
+                                    showTitleBlockerDialog()
+                                    return@ElevatedButton
+                                }
+                                if (contentText.value.isEmpty() || contentText.value.isBlank()) {
+                                    showContentBlockerDialog()
+                                    return@ElevatedButton
+                                }
+
+                                requireActivity().supportFragmentManager.commit {
+                                    setCustomAnimations(
+                                        R.anim.slide_in,
+                                        R.anim.fade_out,
+                                        R.anim.fade_in,
+                                        R.anim.slide_out
+                                    )
+                                    addToBackStack(CameraFragment.TAG)
+                                    replace(R.id.container, CameraFragment.newInstance())
+                                }
+                            },
                             modifier = Modifier.align(Alignment.BottomEnd)
                         ) {
                             Text(text = "Next")
@@ -91,11 +114,43 @@ class TextInputFragment : Fragment() {
                 }
             }
         }
-        return binding.root
+
+        return requireNotNull(textInputBinding).root
+    }
+
+    private fun showTitleBlockerDialog() {
+        AlertDialog.Builder(requireActivity())
+            .setTitle("Title missing")
+            .setMessage(
+                "There is not title set for this project. Please set a title to continue" +
+                    " recording."
+            )
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showContentBlockerDialog() {
+        AlertDialog.Builder(requireActivity())
+            .setTitle("Content missing")
+            .setMessage(
+                "There is not title set for this project. Please set a title to continue" +
+                    " recording."
+            )
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        textInputBinding = null
     }
 
     companion object {
         fun newInstance() = TextInputFragment()
-        val TAG = "TextInputFragment"
+        const val TAG = "TextInputFragment"
     }
 }
