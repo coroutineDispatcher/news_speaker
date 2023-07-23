@@ -157,7 +157,7 @@ class TextInputFragment : Fragment() {
                 R.anim.slide_out
             )
             addToBackStack(CameraFragment.TAG)
-            replace(R.id.container, CameraFragment.newInstance())
+            replace(R.id.container, CameraFragment.newInstance(currentProjectId))
         }
     }
 
