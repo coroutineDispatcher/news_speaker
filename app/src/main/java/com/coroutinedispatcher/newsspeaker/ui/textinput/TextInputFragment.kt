@@ -11,12 +11,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,14 +24,25 @@ import androidx.compose.ui.text.input.ImeAction.Companion.Next
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentTextInputBinding
 import com.coroutinedispatcher.newsspeaker.ui.camera.CameraFragment
 import com.coroutinedispatcher.newsspeaker.ui.theme.NewsSpeakerTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class TextInputFragment : Fragment() {
 
     private var textInputBinding: FragmentTextInputBinding? = null
+    private val textInputViewModel by viewModels<TextInputViewModel>()
+    private var currentProjectId: Long = -1
+
+    override fun onResume() {
+        super.onResume()
+        textInputViewModel.getOrCreate(currentProjectId)
+    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreateView(
@@ -42,10 +53,16 @@ class TextInputFragment : Fragment() {
         textInputBinding = FragmentTextInputBinding.inflate(inflater, container, false)
 
         requireNotNull(textInputBinding).textInputComposable.setContent {
-            val titleText = remember { mutableStateOf("") }
-            val contentText = remember { mutableStateOf("") }
+            val textInputUIState = textInputViewModel.state.collectAsStateWithLifecycle()
+            val titleText = remember { textInputViewModel.titleText }
+            val contentText = remember { textInputViewModel.contentText }
 
-            NewsSpeakerTheme {
+            contentText.value = textInputUIState.value.project?.content.orEmpty()
+            titleText.value = textInputUIState.value.project?.title.orEmpty()
+
+            currentProjectId = textInputUIState.value.project?.pId ?: -1
+
+            NewsSpeakerTheme(activityContext = requireActivity()) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxSize()
@@ -62,7 +79,15 @@ class TextInputFragment : Fragment() {
                             titleText.value = newValue
                         },
                         maxLines = 1,
-                        keyboardOptions = KeyboardOptions(imeAction = Next)
+                        keyboardOptions = KeyboardOptions(imeAction = Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                textInputViewModel.update(
+                                    title = titleText.value,
+                                    content = contentText.value
+                                )
+                            }
+                        ),
                     )
                     OutlinedTextField(
                         modifier = Modifier
@@ -76,7 +101,15 @@ class TextInputFragment : Fragment() {
                         onValueChange = { newValue ->
                             contentText.value = newValue
                         },
-                        keyboardOptions = KeyboardOptions(imeAction = Next)
+                        keyboardOptions = KeyboardOptions(imeAction = Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = {
+                                textInputViewModel.update(
+                                    content = contentText.value,
+                                    title = titleText.value
+                                )
+                            }
+                        ),
                     )
                     Box(
                         modifier = Modifier
@@ -95,16 +128,12 @@ class TextInputFragment : Fragment() {
                                     return@ElevatedButton
                                 }
 
-                                requireActivity().supportFragmentManager.commit {
-                                    setCustomAnimations(
-                                        R.anim.slide_in,
-                                        R.anim.fade_out,
-                                        R.anim.fade_in,
-                                        R.anim.slide_out
-                                    )
-                                    addToBackStack(CameraFragment.TAG)
-                                    replace(R.id.container, CameraFragment.newInstance())
-                                }
+                                textInputViewModel.update(
+                                    title = titleText.value,
+                                    content = contentText.value
+                                )
+
+                                switchToCameraFragment()
                             },
                             modifier = Modifier.align(Alignment.BottomEnd)
                         ) {
@@ -115,7 +144,21 @@ class TextInputFragment : Fragment() {
             }
         }
 
+        currentProjectId = arguments?.getLong(PROJECT_ID_FRAGMENT_ARG) ?: -1
         return requireNotNull(textInputBinding).root
+    }
+
+    private fun switchToCameraFragment() {
+        requireActivity().supportFragmentManager.commit {
+            setCustomAnimations(
+                R.anim.slide_in,
+                R.anim.fade_out,
+                R.anim.fade_in,
+                R.anim.slide_out
+            )
+            addToBackStack(CameraFragment.TAG)
+            replace(R.id.container, CameraFragment.newInstance())
+        }
     }
 
     private fun showTitleBlockerDialog() {
@@ -123,7 +166,7 @@ class TextInputFragment : Fragment() {
             .setTitle("Title missing")
             .setMessage(
                 "There is not title set for this project. Please set a title to continue" +
-                    " recording."
+                        " recording."
             )
             .setPositiveButton("OK") { dialog, _ ->
                 dialog.dismiss()
@@ -136,7 +179,7 @@ class TextInputFragment : Fragment() {
             .setTitle("Content missing")
             .setMessage(
                 "There is not title set for this project. Please set a title to continue" +
-                    " recording."
+                        " recording."
             )
             .setPositiveButton("OK") { dialog, _ ->
                 dialog.dismiss()
@@ -150,7 +193,15 @@ class TextInputFragment : Fragment() {
     }
 
     companion object {
-        fun newInstance() = TextInputFragment()
+        const val PROJECT_ID_FRAGMENT_ARG = "project_id_fragment_arg"
+        fun newInstance(projectId: Long = -1): TextInputFragment {
+            val fragment = TextInputFragment()
+            val arguments = Bundle()
+            arguments.putLong(PROJECT_ID_FRAGMENT_ARG, projectId)
+            fragment.arguments = arguments
+            return fragment
+        }
+
         const val TAG = "TextInputFragment"
     }
 }

@@ -43,7 +43,7 @@ class MainFragment : Fragment() {
         mainFragmentBinding = FragmentMainBinding.inflate(inflater, container, false)
 
         requireNotNull(mainFragmentBinding).composeView.setContent {
-            NewsSpeakerTheme {
+            NewsSpeakerTheme(activityContext = requireActivity()) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

@@ -3,7 +3,9 @@ package com.coroutinedispatcher.newsspeaker
 import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
 import com.coroutinedispatcher.newsspeaker.ui.main.MainFragment
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
