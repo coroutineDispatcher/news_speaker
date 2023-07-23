@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.commit
 import androidx.lifecycle.ViewModelProvider
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentMainBinding
@@ -54,11 +55,16 @@ class MainFragment : Fragment() {
                         FloatingActionButton(
                             modifier = Modifier.padding(16.dp),
                             onClick = {
-                                requireActivity().supportFragmentManager
-                                    .beginTransaction()
-                                    .addToBackStack(TextInputFragment.TAG)
-                                    .replace(R.id.container, TextInputFragment.newInstance())
-                                    .commit()
+                                requireActivity().supportFragmentManager.commit {
+                                    setCustomAnimations(
+                                        R.anim.slide_in,
+                                        R.anim.fade_out,
+                                        R.anim.fade_in,
+                                        R.anim.slide_out
+                                    )
+                                    addToBackStack(TextInputFragment.TAG)
+                                    replace(R.id.container, TextInputFragment.newInstance())
+                                }
                             },
                             content = {
                                 Icon(Icons.Filled.Add, contentDescription = "Add")
