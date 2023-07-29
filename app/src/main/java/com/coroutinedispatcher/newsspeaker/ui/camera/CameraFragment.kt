@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.content.SyncStatusObserver
 import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
