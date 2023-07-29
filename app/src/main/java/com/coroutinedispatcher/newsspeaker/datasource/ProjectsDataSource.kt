@@ -2,6 +2,7 @@ package com.coroutinedispatcher.newsspeaker.datasource
 
 import com.coroutinedispatcher.newsspeaker.database.Project
 import com.coroutinedispatcher.newsspeaker.database.ProjectDao
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,4 +39,5 @@ class ProjectsDataSource @Inject constructor(
     }
 
     suspend fun getCurrentProjectById(id: Long) = projectsDao.getProject(id)
+    fun getAllProjects(): Flow<List<Project>> = projectsDao.getAll()
 }

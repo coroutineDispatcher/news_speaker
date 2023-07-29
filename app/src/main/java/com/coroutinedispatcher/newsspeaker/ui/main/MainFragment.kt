@@ -4,9 +4,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
@@ -14,26 +21,28 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.coroutinedispatcher.newsspeaker.ImageThumbnail
 import com.coroutinedispatcher.newsspeaker.R
+import com.coroutinedispatcher.newsspeaker.database.Project
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentMainBinding
 import com.coroutinedispatcher.newsspeaker.ui.textinput.TextInputFragment
 import com.coroutinedispatcher.newsspeaker.ui.theme.NewsSpeakerTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainFragment : Fragment() {
 
-    private lateinit var viewModel: MainViewModel
+    private val viewModel by viewModels<MainViewModel>()
     private var mainFragmentBinding: FragmentMainBinding? = null
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -43,6 +52,8 @@ class MainFragment : Fragment() {
         mainFragmentBinding = FragmentMainBinding.inflate(inflater, container, false)
 
         requireNotNull(mainFragmentBinding).composeView.setContent {
+            val state = viewModel.state.collectAsStateWithLifecycle()
+
             NewsSpeakerTheme(activityContext = requireActivity()) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -52,6 +63,20 @@ class MainFragment : Fragment() {
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.BottomEnd
                     ) {
+
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            when (state.value) {
+                                MainViewModel.State.Empty -> Text(text = "Empty")
+                                is MainViewModel.State.Success -> Projects(
+                                    (state.value as MainViewModel.State.Success).data
+                                )
+                            }
+                        }
+
                         FloatingActionButton(
                             modifier = Modifier.padding(16.dp),
                             onClick = {
@@ -77,6 +102,24 @@ class MainFragment : Fragment() {
         }
 
         return requireNotNull(mainFragmentBinding).root
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
+    @Composable
+    private fun Projects(data: List<Project>) {
+        LazyVerticalStaggeredGrid(
+            modifier = Modifier.fillMaxSize(),
+            columns = StaggeredGridCells.Fixed(2),
+        ) {
+            items(data) { project ->
+                Box(
+                    modifier = Modifier
+                        .wrapContentSize()
+                ) {
+                    ImageThumbnail(project = project)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {

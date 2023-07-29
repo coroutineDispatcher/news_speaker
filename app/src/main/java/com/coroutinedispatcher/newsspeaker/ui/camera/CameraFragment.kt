@@ -15,7 +15,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.video.FallbackStrategy
 import androidx.camera.video.MediaStoreOutputOptions
 import androidx.camera.video.Quality
 import androidx.camera.video.QualitySelector
@@ -29,8 +28,10 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentCameraBinding
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -71,6 +72,27 @@ class CameraFragment : Fragment() {
         } else {
             requestPermissions()
         }
+
+        val projectId = arguments?.getLong(PROJECT_ID_FRAGMENT_TAG_CAMERA)
+        if (projectId == null) {
+            Toast.makeText(requireActivity(), "Something went wrong", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        cameraViewModel.loadCurrentProject(projectId)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewLifecycleOwner.lifecycleScope.launch {
+            cameraViewModel.state.collect {
+                when (it) {
+                    CameraViewModel.State.Finished -> finish()
+                    CameraViewModel.State.Idle -> Unit
+                }
+            }
+        }
     }
 
     override fun onCreateView(
@@ -86,14 +108,6 @@ class CameraFragment : Fragment() {
         binding.btnRecord.setOnClickListener {
             captureVideo()
         }
-        val qualitySelector = QualitySelector.fromOrderedList(
-            listOf(Quality.HD),
-            FallbackStrategy.lowerQualityOrHigherThan(Quality.SD)
-        )
-        val recorder = Recorder.Builder()
-            .setExecutor(cameraExecutor).setQualitySelector(qualitySelector)
-            .build()
-        videoCapture = VideoCapture.withOutput(recorder)
         return checkNotNull(cameraBinding).root
     }
 
@@ -103,9 +117,6 @@ class CameraFragment : Fragment() {
 
     private fun captureVideo() {
         val videoCapture = this.videoCapture ?: return
-
-        binding.ivBackArrow.isVisible = false
-        binding.btnRecord.setRecording(true)
 
         val curRecording = recording
 
@@ -146,29 +157,35 @@ class CameraFragment : Fragment() {
             }
             .start(ContextCompat.getMainExecutor(requireActivity())) { recordEvent ->
                 when (recordEvent) {
-                    is VideoRecordEvent.Start -> Unit
+                    is VideoRecordEvent.Start -> {
+                        binding.ivBackArrow.isVisible = false
+                        binding.btnRecord.setRecording(true)
+                    }
+
                     is VideoRecordEvent.Finalize -> {
                         if (!recordEvent.hasError()) {
                             val msg = "Video capture succeeded: " +
-                                "${recordEvent.outputResults.outputUri}"
+                                    "${recordEvent.outputResults.outputUri}"
                             Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT)
                                 .show()
-                            Log.d(TAG, msg)
-                            binding.ivBackArrow.isVisible = true
-                            binding.btnRecord.setRecording(false)
-                            finish()
+
+                            cameraViewModel.saveProjectToDatabase(
+                                recordEvent.outputResults.outputUri
+                            )
                         } else {
                             recording?.close()
                             recording = null
-                            Log.e(
-                                TAG,
-                                "Video capture ends with error: " +
-                                    "${recordEvent.error}"
-                            )
+                            somethingWentWrong()
                         }
+                        binding.ivBackArrow.isVisible = true
+                        binding.btnRecord.setRecording(false)
                     }
                 }
             }
+    }
+
+    private fun somethingWentWrong() {
+
     }
 
     private fun finish() {
@@ -183,27 +200,35 @@ class CameraFragment : Fragment() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireActivity())
 
         cameraProviderFuture.addListener({
+            // Used to bind the lifecycle of cameras to the lifecycle owner
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
+            // Preview
             val preview = Preview.Builder()
                 .build()
                 .also {
-                    it.setSurfaceProvider(requireNotNull(cameraBinding).viewFinder.surfaceProvider)
+                    it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
                 }
 
+            val recorder = Recorder.Builder()
+                .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
+                .build()
+            videoCapture = VideoCapture.withOutput(recorder)
+
+            // Select back camera as a default
             val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
 
             try {
+                // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
 
-                cameraProvider.bindToLifecycle(
-                    this,
-                    cameraSelector,
-                    preview
-                )
+                // Bind use cases to camera
+                cameraProvider
+                    .bindToLifecycle(this, cameraSelector, preview, videoCapture)
             } catch (exc: Exception) {
-                Log.d(TAG, "startCamera: ${exc.printStackTrace()}")
+                Log.e(TAG, "Use case binding failed", exc)
             }
+
         }, ContextCompat.getMainExecutor(requireActivity()))
     }
 
