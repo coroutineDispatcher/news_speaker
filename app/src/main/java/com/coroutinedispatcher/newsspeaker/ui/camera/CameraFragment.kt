@@ -165,7 +165,7 @@ class CameraFragment : Fragment() {
                     is VideoRecordEvent.Finalize -> {
                         if (!recordEvent.hasError()) {
                             val msg = "Video capture succeeded: " +
-                                    "${recordEvent.outputResults.outputUri}"
+                                "${recordEvent.outputResults.outputUri}"
                             Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT)
                                 .show()
 
@@ -185,7 +185,6 @@ class CameraFragment : Fragment() {
     }
 
     private fun somethingWentWrong() {
-
     }
 
     private fun finish() {
@@ -228,7 +227,6 @@ class CameraFragment : Fragment() {
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
-
         }, ContextCompat.getMainExecutor(requireActivity()))
     }
 

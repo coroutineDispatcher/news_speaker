@@ -43,6 +43,9 @@ jobs:
       - name: Change wrapper permissions
         run: chmod +x ./gradlew
 
+      - name: Run Ktlint
+        run: ./gradlew ktlintCheck
+
       # Run Tests Build
       - name: Run gradle tests
         run: ./gradlew test

@@ -63,7 +63,6 @@ class MainFragment : Fragment() {
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.BottomEnd
                     ) {
-
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -109,7 +108,7 @@ class MainFragment : Fragment() {
     private fun Projects(data: List<Project>) {
         LazyVerticalStaggeredGrid(
             modifier = Modifier.fillMaxSize(),
-            columns = StaggeredGridCells.Fixed(2),
+            columns = StaggeredGridCells.Fixed(2)
         ) {
             items(data) { project ->
                 Box(

@@ -22,7 +22,10 @@ class MainViewModel @Inject constructor(
 
     val state = getAllProjectsUseCase()
         .map { projects ->
-            if (projects.isEmpty()) State.Empty
-            else State.Success(projects)
+            if (projects.isEmpty()) {
+                State.Empty
+            } else {
+                State.Success(projects)
+            }
         }.stateIn(viewModelScope, SharingStarted.Lazily, State.Empty)
 }
