@@ -9,7 +9,11 @@
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <com.coroutinedispatcher.newsspeaker.ui.custom.RecordButtonView
         android:id="@+id/btn_record"
@@ -33,4 +37,19 @@
         android:src="@drawable/baseline_arrow_back_24"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/tv_content"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="bottom|center_horizontal"
+        android:text="@string/long_text"
+        android:textAlignment="center"
+        android:textColor="@color/white"
+        android:textSize="64sp"
+        android:background="#CC0F0F0F"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/viewFinder" />
 </androidx.constraintlayout.widget.ConstraintLayout>

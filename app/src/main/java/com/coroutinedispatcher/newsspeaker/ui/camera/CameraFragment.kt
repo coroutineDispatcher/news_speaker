@@ -5,8 +5,8 @@ import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.content.SyncStatusObserver
 import android.provider.MediaStore
+import android.text.method.ScrollingMovementMethod
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -32,11 +32,16 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentCameraBinding
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.time.Duration.Companion.seconds
 
 @AndroidEntryPoint
 class CameraFragment : Fragment() {
@@ -44,6 +49,9 @@ class CameraFragment : Fragment() {
     private var cameraBinding: FragmentCameraBinding? = null
     private val binding
         get() = checkNotNull(cameraBinding)
+    private var currentScrollY = 0
+    private var isRecording = false
+    private var scrollStep = 5
 
     private var videoCapture: VideoCapture<Recorder>? = null
     private var recording: Recording? = null
@@ -80,7 +88,6 @@ class CameraFragment : Fragment() {
             finish()
             return
         }
-
         cameraViewModel.loadCurrentProject(projectId)
     }
 
@@ -91,6 +98,9 @@ class CameraFragment : Fragment() {
                 when (it) {
                     CameraViewModel.State.Finished -> finish()
                     CameraViewModel.State.Idle -> Unit
+                    is CameraViewModel.State.ContentReady -> {
+                        binding.tvContent.text = it.project.content
+                    }
                 }
             }
         }
@@ -103,6 +113,7 @@ class CameraFragment : Fragment() {
     ): View {
         cameraBinding = FragmentCameraBinding.inflate(inflater, container, false)
         cameraExecutor = Executors.newSingleThreadExecutor()
+        binding.tvContent.text = ""
         binding.ivBackArrow.setOnClickListener {
             requireActivity().supportFragmentManager.popBackStack()
         }
@@ -110,6 +121,42 @@ class CameraFragment : Fragment() {
             captureVideo()
         }
         return checkNotNull(cameraBinding).root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        with(binding.tvContent) {
+            isVerticalScrollBarEnabled = true
+            isFocusable = true
+            requestFocus()
+            movementMethod = ScrollingMovementMethod()
+            binding.tvContent.post { binding.tvContent.scrollTo(0, 0) }
+        }
+    }
+
+    private fun animateUpScroll() {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
+            while (isRecording && isActive) {
+                delay(1.seconds)
+                withContext(Dispatchers.Main) {
+                    with(binding.tvContent) {
+                        val maxScroll = layout.getLineTop(lineCount) - height
+                        val newScrollY = currentScrollY + lineHeight
+                        val clampedScrollY = newScrollY.coerceIn(0, maxScroll)
+                        scrollTo(0, clampedScrollY)
+                        Log.d(TAG, "animateUpScroll: $newScrollY")
+                        Log.d(
+                            TAG,
+                            "layout.getLineTop(lineCount) - height: ${
+                            layout.getLineTop(lineCount) - height
+                            }"
+                        )
+                        Log.d(TAG, "clamped: $clampedScrollY")
+                        currentScrollY = clampedScrollY
+                    }
+                }
+            }
+        }
     }
 
     private fun requestPermissions() {
@@ -158,31 +205,38 @@ class CameraFragment : Fragment() {
             }
             .start(ContextCompat.getMainExecutor(requireActivity())) { recordEvent ->
                 when (recordEvent) {
-                    is VideoRecordEvent.Start -> {
-                        binding.ivBackArrow.isVisible = false
-                        binding.btnRecord.setRecording(true)
-                    }
+                    is VideoRecordEvent.Start -> onRecordingStarted()
 
-                    is VideoRecordEvent.Finalize -> {
-                        if (!recordEvent.hasError()) {
-                            val msg = "Video capture succeeded: " +
-                                "${recordEvent.outputResults.outputUri}"
-                            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT)
-                                .show()
-
-                            cameraViewModel.saveProjectToDatabase(
-                                recordEvent.outputResults.outputUri
-                            )
-                        } else {
-                            recording?.close()
-                            recording = null
-                            somethingWentWrong()
-                        }
-                        binding.ivBackArrow.isVisible = true
-                        binding.btnRecord.setRecording(false)
-                    }
+                    is VideoRecordEvent.Finalize -> onRecordingStopped(recordEvent)
                 }
             }
+    }
+
+    private fun onRecordingStarted() {
+        binding.ivBackArrow.isVisible = false
+        binding.btnRecord.setRecording(true)
+        isRecording = true
+        animateUpScroll()
+    }
+
+    private fun onRecordingStopped(recordEvent: VideoRecordEvent.Finalize) {
+        isRecording = false
+        if (!recordEvent.hasError()) {
+            val msg = "Video capture succeeded: " +
+                "${recordEvent.outputResults.outputUri}"
+            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT)
+                .show()
+
+            cameraViewModel.saveProjectToDatabase(
+                recordEvent.outputResults.outputUri
+            )
+        } else {
+            recording?.close()
+            recording = null
+            somethingWentWrong()
+        }
+        binding.ivBackArrow.isVisible = true
+        binding.btnRecord.setRecording(false)
     }
 
     private fun somethingWentWrong() {

@@ -26,10 +26,14 @@ class CameraViewModel @Inject constructor(
     sealed class State {
         object Idle : State()
         object Finished : State()
+        data class ContentReady(val project: Project) : State()
     }
 
     fun loadCurrentProject(id: Long) {
-        viewModelScope.launch { currentProject = getCurrentProjectUseCase(id) }
+        viewModelScope.launch {
+            currentProject = getCurrentProjectUseCase(id)
+            _state.update { State.ContentReady(currentProject) }
+        }
     }
 
     fun saveProjectToDatabase(outputUri: Uri) {
