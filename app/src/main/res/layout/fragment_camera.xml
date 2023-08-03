@@ -38,17 +38,11 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <TextView
-        android:id="@+id/tv_content"
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/cv_subtitles"
         android:layout_width="match_parent"
         android:layout_height="300dp"
-        android:fontFamily="sans-serif-medium"
-        android:gravity="bottom|center_horizontal"
         android:text="@string/long_text"
-        android:textAlignment="center"
-        android:textColor="@color/white"
-        android:textSize="64sp"
-        android:background="#CC0F0F0F"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/viewFinder" />

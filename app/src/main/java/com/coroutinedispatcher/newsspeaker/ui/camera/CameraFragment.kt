@@ -1,12 +1,12 @@
 package com.coroutinedispatcher.newsspeaker.ui.camera
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
-import android.text.method.ScrollingMovementMethod
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -23,25 +23,33 @@ import androidx.camera.video.Recorder
 import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
+import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentCameraBinding
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlin.time.Duration.Companion.seconds
 
 @AndroidEntryPoint
 class CameraFragment : Fragment() {
@@ -49,9 +57,6 @@ class CameraFragment : Fragment() {
     private var cameraBinding: FragmentCameraBinding? = null
     private val binding
         get() = checkNotNull(cameraBinding)
-    private var currentScrollY = 0
-    private var isRecording = false
-    private var scrollStep = 5
 
     private var videoCapture: VideoCapture<Recorder>? = null
     private var recording: Recording? = null
@@ -98,11 +103,50 @@ class CameraFragment : Fragment() {
                 when (it) {
                     CameraViewModel.State.Finished -> finish()
                     CameraViewModel.State.Idle -> Unit
-                    is CameraViewModel.State.ContentReady -> {
-                        binding.tvContent.text = it.project.content
-                    }
+                    is CameraViewModel.State.ContentReady -> drawComposeListView(it)
                 }
             }
+        }
+    }
+
+    @SuppressLint("CoroutineCreationDuringComposition")
+    private fun drawComposeListView(state: CameraViewModel.State.ContentReady) {
+        binding.cvSubtitles.setContent {
+            val listState = rememberLazyListState()
+            val coroutineScope = rememberCoroutineScope()
+            val data = state.project.content.split(" ").toList() + listOf(" ", " ")
+            val scrollEvent = cameraViewModel.scrollingState.collectAsStateWithLifecycle(
+                initialValue = null
+            )
+
+            when (val scrollingStateValue = scrollEvent.value) {
+                null -> Unit
+                else -> coroutineScope.launch {
+                    if (scrollingStateValue >= data.size) return@launch
+                    listState.animateScrollToItem(scrollingStateValue)
+                }
+            }
+
+            LazyColumn(
+                content = {
+                    items(data.size) { position ->
+                        Text(
+                            text = data[position],
+                            modifier = Modifier.fillMaxSize(),
+                            fontSize = 32.sp,
+                            textAlign = TextAlign.Center,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Color("#CC0F0F0F".toColorInt())
+                    ),
+                state = listState
+            )
         }
     }
 
@@ -113,7 +157,6 @@ class CameraFragment : Fragment() {
     ): View {
         cameraBinding = FragmentCameraBinding.inflate(inflater, container, false)
         cameraExecutor = Executors.newSingleThreadExecutor()
-        binding.tvContent.text = ""
         binding.ivBackArrow.setOnClickListener {
             requireActivity().supportFragmentManager.popBackStack()
         }
@@ -121,42 +164,6 @@ class CameraFragment : Fragment() {
             captureVideo()
         }
         return checkNotNull(cameraBinding).root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        with(binding.tvContent) {
-            isVerticalScrollBarEnabled = true
-            isFocusable = true
-            requestFocus()
-            movementMethod = ScrollingMovementMethod()
-            binding.tvContent.post { binding.tvContent.scrollTo(0, 0) }
-        }
-    }
-
-    private fun animateUpScroll() {
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
-            while (isRecording && isActive) {
-                delay(1.seconds)
-                withContext(Dispatchers.Main) {
-                    with(binding.tvContent) {
-                        val maxScroll = layout.getLineTop(lineCount) - height
-                        val newScrollY = currentScrollY + lineHeight
-                        val clampedScrollY = newScrollY.coerceIn(0, maxScroll)
-                        scrollTo(0, clampedScrollY)
-                        Log.d(TAG, "animateUpScroll: $newScrollY")
-                        Log.d(
-                            TAG,
-                            "layout.getLineTop(lineCount) - height: ${
-                            layout.getLineTop(lineCount) - height
-                            }"
-                        )
-                        Log.d(TAG, "clamped: $clampedScrollY")
-                        currentScrollY = clampedScrollY
-                    }
-                }
-            }
-        }
     }
 
     private fun requestPermissions() {
@@ -215,12 +222,11 @@ class CameraFragment : Fragment() {
     private fun onRecordingStarted() {
         binding.ivBackArrow.isVisible = false
         binding.btnRecord.setRecording(true)
-        isRecording = true
-        animateUpScroll()
+        cameraViewModel.startLoopingSubtitles()
     }
 
     private fun onRecordingStopped(recordEvent: VideoRecordEvent.Finalize) {
-        isRecording = false
+        cameraViewModel.stopLoopingSubtitles()
         if (!recordEvent.hasError()) {
             val msg = "Video capture succeeded: " +
                 "${recordEvent.outputResults.outputUri}"
@@ -240,6 +246,7 @@ class CameraFragment : Fragment() {
     }
 
     private fun somethingWentWrong() {
+        // TODO. Don't forget to handle me 👀
     }
 
     private fun finish() {
