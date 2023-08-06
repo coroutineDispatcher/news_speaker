@@ -2,8 +2,10 @@ package com.coroutinedispatcher.newsspeaker.datasource
 
 import com.coroutinedispatcher.newsspeaker.database.Project
 import com.coroutinedispatcher.newsspeaker.database.ProjectDao
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,9 +35,8 @@ class ProjectsDataSource @Inject constructor(
         )
     )
 
-    fun delete(project: Project) = flow {
+    suspend fun delete(project: Project) = withContext(Dispatchers.IO) {
         projectsDao.delete(project)
-        emit(Unit)
     }
 
     suspend fun getCurrentProjectById(id: Long) = projectsDao.getProject(id)

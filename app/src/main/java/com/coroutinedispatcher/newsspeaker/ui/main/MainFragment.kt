@@ -36,6 +36,7 @@ import com.coroutinedispatcher.newsspeaker.database.Project
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentMainBinding
 import com.coroutinedispatcher.newsspeaker.ui.textinput.TextInputFragment
 import com.coroutinedispatcher.newsspeaker.ui.theme.NewsSpeakerTheme
+import com.coroutinedispatcher.newsspeaker.ui.videodetails.VideoDetailsFragment
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -80,8 +81,11 @@ class MainFragment : Fragment() {
                                                 R.anim.fade_in,
                                                 R.anim.slide_out
                                             )
-                                            addToBackStack(TextInputFragment.TAG)
-                                            replace(R.id.container, TextInputFragment.newInstance())
+                                            addToBackStack(VideoDetailsFragment.VIDEO_DETAILS_FRAGMENT_TAG)
+                                            replace(
+                                                R.id.container,
+                                                VideoDetailsFragment.newInstance(projectId)
+                                            )
                                         }
                                     }
                                 )
