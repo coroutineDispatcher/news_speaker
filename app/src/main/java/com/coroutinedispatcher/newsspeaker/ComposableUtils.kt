@@ -6,6 +6,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -26,10 +27,11 @@ import com.coroutinedispatcher.newsspeaker.database.Project
 import kotlin.math.roundToInt
 
 @Composable
-fun ImageThumbnail(modifier: Modifier = Modifier, project: Project) {
+fun ImageThumbnail(modifier: Modifier = Modifier, project: Project, onItemClicked: (Long) -> Unit) {
     Box(
         modifier = modifier
             .wrapContentSize()
+            .clickable { onItemClicked(project.pId) }
     ) {
         val context = LocalContext.current
 

@@ -71,7 +71,19 @@ class MainFragment : Fragment() {
                             when (state.value) {
                                 MainViewModel.State.Empty -> Text(text = "Empty")
                                 is MainViewModel.State.Success -> Projects(
-                                    (state.value as MainViewModel.State.Success).data
+                                    (state.value as MainViewModel.State.Success).data,
+                                    onItemClicked = { projectId ->
+                                        requireActivity().supportFragmentManager.commit {
+                                            setCustomAnimations(
+                                                R.anim.slide_in,
+                                                R.anim.fade_out,
+                                                R.anim.fade_in,
+                                                R.anim.slide_out
+                                            )
+                                            addToBackStack(TextInputFragment.TAG)
+                                            replace(R.id.container, TextInputFragment.newInstance())
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -105,7 +117,7 @@ class MainFragment : Fragment() {
 
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
-    private fun Projects(data: List<Project>) {
+    private fun Projects(data: List<Project>, onItemClicked: (Long) -> Unit) {
         LazyVerticalStaggeredGrid(
             modifier = Modifier.fillMaxSize(),
             columns = StaggeredGridCells.Fixed(2)
@@ -115,7 +127,7 @@ class MainFragment : Fragment() {
                     modifier = Modifier
                         .wrapContentSize()
                 ) {
-                    ImageThumbnail(project = project)
+                    ImageThumbnail(project = project, onItemClicked = onItemClicked)
                 }
             }
         }
