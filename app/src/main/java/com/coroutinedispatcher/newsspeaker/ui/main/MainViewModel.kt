@@ -16,6 +16,7 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     sealed class State {
+        object Loading : State()
         object Empty : State()
         data class Success(val data: List<Project>) : State()
     }

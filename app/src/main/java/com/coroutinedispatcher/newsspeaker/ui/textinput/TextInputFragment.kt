@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -28,8 +28,8 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentTextInputBinding
+import com.coroutinedispatcher.newsspeaker.theme.AppTheme
 import com.coroutinedispatcher.newsspeaker.ui.camera.CameraFragment
-import com.coroutinedispatcher.newsspeaker.ui.theme.NewsSpeakerTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -62,7 +62,7 @@ class TextInputFragment : Fragment() {
 
             currentProjectId = textInputUIState.value.project?.pId ?: -1
 
-            NewsSpeakerTheme(activityContext = requireActivity()) {
+            AppTheme {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxSize()
@@ -117,15 +117,17 @@ class TextInputFragment : Fragment() {
                             .wrapContentHeight()
                             .padding(16.dp)
                     ) {
-                        ElevatedButton(
+                        Button(
                             onClick = {
                                 if (titleText.value.isEmpty() || titleText.value.isBlank()) {
+                                    // TODO Update these dialogs
                                     showTitleBlockerDialog()
-                                    return@ElevatedButton
+                                    return@Button
                                 }
                                 if (contentText.value.isEmpty() || contentText.value.isBlank()) {
+                                    // TODO Update these dialogs
                                     showContentBlockerDialog()
-                                    return@ElevatedButton
+                                    return@Button
                                 }
 
                                 textInputViewModel.update(

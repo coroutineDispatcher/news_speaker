@@ -1,11 +1,11 @@
 package com.coroutinedispatcher.newsspeaker.ui.textinput
 
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.coroutinedispatcher.newsspeaker.database.Project
 import com.coroutinedispatcher.newsspeaker.usecase.CreateNewProjectUseCase
+import com.coroutinedispatcher.newsspeaker.usecase.DeleteProjectUseCase
 import com.coroutinedispatcher.newsspeaker.usecase.GetCurrentProjectUseCase
 import com.coroutinedispatcher.newsspeaker.usecase.UpdateProjectUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,11 +18,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// TODO: Rework. It's not well thought
 @HiltViewModel
 class TextInputViewModel @Inject constructor(
     private val createNewProjectUseCase: CreateNewProjectUseCase,
     private val updateProjectUseCase: UpdateProjectUseCase,
-    private val getCurrentProjectUseCase: GetCurrentProjectUseCase
+    private val getCurrentProjectUseCase: GetCurrentProjectUseCase,
+    private val deleteProjectUseCase: DeleteProjectUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<State>(State())
@@ -36,11 +38,9 @@ class TextInputViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             if (projectId == -1L) {
                 createNewProjectUseCase().collectLatest { projectId ->
-                    Log.d("NewlycreatedProject", "getOrCreate new: $projectId")
                     updateStateWithCurrentProject(projectId)
                 }
             } else {
-                Log.d("NewlycreatedProject", "getOrCreate existing: $projectId")
                 updateStateWithCurrentProject(projectId)
             }
         }
@@ -55,7 +55,6 @@ class TextInputViewModel @Inject constructor(
 
     private suspend fun updateStateWithCurrentProject(id: Long) {
         val project = getCurrentProjectUseCase(id)
-        Log.d("NewlycreatedProject", "updateStateWithCurrentProject: $project")
         titleText.value = project.title
         contentText.value = project.content
         _state.update { it.copy(project = project) }

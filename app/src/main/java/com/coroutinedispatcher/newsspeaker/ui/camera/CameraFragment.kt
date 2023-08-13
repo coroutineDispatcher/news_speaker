@@ -43,6 +43,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentCameraBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -221,7 +222,12 @@ class CameraFragment : Fragment() {
 
     private fun onRecordingStarted() {
         binding.ivBackArrow.isVisible = false
-        binding.btnRecord.setRecording(true)
+        binding.btnRecord.setImageDrawable(
+            ContextCompat.getDrawable(
+                requireActivity(),
+                R.drawable.stop_recording_light
+            )
+        )
         cameraViewModel.startLoopingSubtitles()
     }
 
@@ -242,7 +248,9 @@ class CameraFragment : Fragment() {
             somethingWentWrong()
         }
         binding.ivBackArrow.isVisible = true
-        binding.btnRecord.setRecording(false)
+        binding.btnRecord.setImageDrawable(
+            ContextCompat.getDrawable(requireActivity(), R.drawable.record_light_mode_button)
+        )
     }
 
     private fun somethingWentWrong() {

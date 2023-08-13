@@ -15,12 +15,12 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.coroutinedispatcher.newsspeaker.ui.custom.RecordButtonView
+    <ImageView
         android:id="@+id/btn_record"
         android:layout_width="100dp"
         android:layout_height="100dp"
+        android:src="@drawable/record_light_mode_button"
         android:layout_marginBottom="32dp"
-        android:padding="32dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

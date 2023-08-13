@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="empty">Empty</string>
+    <string name="nothing_here">No projects</string>
+    <string name="create_new_project">Create a project</string>
+    <string name="new_projects_stay_here">New projects stay here</string>
+</resources>

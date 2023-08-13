@@ -16,12 +16,12 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,8 +34,9 @@ import com.coroutinedispatcher.newsspeaker.ImageThumbnail
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.database.Project
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentMainBinding
+import com.coroutinedispatcher.newsspeaker.theme.AppTheme
+import com.coroutinedispatcher.newsspeaker.ui.reusable.EmptyScreen
 import com.coroutinedispatcher.newsspeaker.ui.textinput.TextInputFragment
-import com.coroutinedispatcher.newsspeaker.ui.theme.NewsSpeakerTheme
 import com.coroutinedispatcher.newsspeaker.ui.videodetails.VideoDetailsFragment
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -44,6 +45,8 @@ class MainFragment : Fragment() {
 
     private val viewModel by viewModels<MainViewModel>()
     private var mainFragmentBinding: FragmentMainBinding? = null
+    private val binding
+        get() = checkNotNull(mainFragmentBinding)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -52,10 +55,10 @@ class MainFragment : Fragment() {
     ): View {
         mainFragmentBinding = FragmentMainBinding.inflate(inflater, container, false)
 
-        requireNotNull(mainFragmentBinding).composeView.setContent {
-            val state = viewModel.state.collectAsStateWithLifecycle()
+        binding.composeView.setContent {
+            val state = viewModel.state.collectAsStateWithLifecycle(MainViewModel.State.Loading)
 
-            NewsSpeakerTheme(activityContext = requireActivity()) {
+            AppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -70,7 +73,7 @@ class MainFragment : Fragment() {
                             verticalArrangement = Arrangement.Center
                         ) {
                             when (state.value) {
-                                MainViewModel.State.Empty -> Text(text = "Empty")
+                                MainViewModel.State.Empty -> EmptyScreen()
                                 is MainViewModel.State.Success -> Projects(
                                     (state.value as MainViewModel.State.Success).data,
                                     onItemClicked = { projectId ->
@@ -89,10 +92,12 @@ class MainFragment : Fragment() {
                                         }
                                     }
                                 )
+
+                                MainViewModel.State.Loading -> CircularProgressIndicator()
                             }
                         }
 
-                        FloatingActionButton(
+                        ExtendedFloatingActionButton(
                             modifier = Modifier.padding(16.dp),
                             onClick = {
                                 requireActivity().supportFragmentManager.commit {
@@ -116,7 +121,7 @@ class MainFragment : Fragment() {
             }
         }
 
-        return requireNotNull(mainFragmentBinding).root
+        return binding.root
     }
 
     @OptIn(ExperimentalFoundationApi::class)
