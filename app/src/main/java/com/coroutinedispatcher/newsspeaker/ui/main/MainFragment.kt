@@ -56,7 +56,7 @@ class MainFragment : Fragment() {
         mainFragmentBinding = FragmentMainBinding.inflate(inflater, container, false)
 
         binding.composeView.setContent {
-            val state = viewModel.state.collectAsStateWithLifecycle(MainViewModel.State.Loading)
+            val state = viewModel.state.collectAsStateWithLifecycle()
 
             AppTheme {
                 Surface(

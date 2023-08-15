@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
@@ -201,22 +202,23 @@ class CameraFragment : Fragment() {
                 .align(Alignment.BottomCenter)
                 .wrapContentHeight()
                 .fillMaxWidth()
+                .background(
+                    Color("#CC0F0F0F".toColorInt())
+                )
         ) {
             Row(
                 modifier = Modifier
+                    .padding(16.dp)
                     .fillMaxWidth()
-                    .wrapContentHeight()
-                    .background(
-                        Color("#CC0F0F0F".toColorInt())
-                    ),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.Bottom
+                    .wrapContentHeight(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 AnimatedVisibility(visible = !isRecording.value) {
                     Image(
                         modifier = modifier
-                            .width(100.dp)
-                            .height(100.dp)
+                            .width(50.dp)
+                            .height(50.dp)
                             .clickable {
                                 requireActivity().supportFragmentManager.popBackStack()
                             },
@@ -388,7 +390,7 @@ class CameraFragment : Fragment() {
         val fragmentManager: FragmentManager = requireActivity().supportFragmentManager
         val backStackEntryCount: Int = fragmentManager.backStackEntryCount
         for (i in 0 until backStackEntryCount) {
-            fragmentManager.popBackStackImmediate()
+            fragmentManager.popBackStack()
         }
     }
 

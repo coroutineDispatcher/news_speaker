@@ -28,5 +28,5 @@ class MainViewModel @Inject constructor(
             } else {
                 State.Success(projects)
             }
-        }.stateIn(viewModelScope, SharingStarted.Lazily, State.Empty)
+        }.stateIn(viewModelScope, SharingStarted.Lazily, State.Loading)
 }
