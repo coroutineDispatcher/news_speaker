@@ -3,7 +3,6 @@ package com.coroutinedispatcher.newsspeaker.ui.camera
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentValues
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -12,7 +11,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -23,28 +21,55 @@ import androidx.camera.video.Recorder
 import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
+import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
 import androidx.core.graphics.toColorInt
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentCameraBinding
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -64,30 +89,100 @@ class CameraFragment : Fragment() {
     private lateinit var cameraExecutor: ExecutorService
     private val cameraViewModel by viewModels<CameraViewModel>()
 
-    private val activityResultLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        var permissionGranted = true
-        permissions.entries.forEach {
-            if (it.key in REQUIRED_PERMISSIONS && !it.value) {
-                permissionGranted = false
+    @SuppressLint("CoroutineCreationDuringComposition")
+    @Composable
+    private fun TextContentComponent(state: CameraViewModel.State.ContentReady) {
+        val listState = rememberLazyListState()
+        val coroutineScope = rememberCoroutineScope()
+        val data = state.project.content.split(" ").toList() + listOf(" ", " ")
+        val scrollEvent = cameraViewModel.scrollingState.collectAsStateWithLifecycle(
+            initialValue = null
+        )
+
+        when (val scrollingStateValue = scrollEvent.value) {
+            null -> Unit
+            else -> coroutineScope.launch {
+                if (scrollingStateValue >= data.size) return@launch
+                listState.animateScrollToItem(scrollingStateValue)
             }
         }
-        if (!permissionGranted) {
-            requireActivity().supportFragmentManager.popBackStack()
-        } else {
-            startCamera()
-        }
+
+        LazyColumn(
+            content = {
+                items(data.size) { position ->
+                    Text(
+                        text = data[position],
+                        modifier = Modifier.fillMaxSize(),
+                        fontSize = 32.sp,
+                        textAlign = TextAlign.Center,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            modifier = Modifier
+                .height(300.dp)
+                .fillMaxWidth()
+                .background(
+                    Color("#CC0F0F0F".toColorInt())
+                ),
+            state = listState
+        )
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        if (allPermissionsGranted()) {
-            startCamera()
-        } else {
-            requestPermissions()
+    @OptIn(ExperimentalPermissionsApi::class)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        cameraBinding = FragmentCameraBinding.inflate(inflater, container, false)
+        cameraExecutor = Executors.newSingleThreadExecutor()
+
+        binding.cameraComposeView.setContent {
+            val lifecycleOwner = LocalLifecycleOwner.current
+            val context = LocalContext.current
+            val cameraProviderFuture = remember {
+                ProcessCameraProvider.getInstance(context)
+            }
+            val cameraPermissionState = rememberMultiplePermissionsState(
+                mutableListOf(
+                    Manifest.permission.CAMERA,
+                    Manifest.permission.RECORD_AUDIO
+                ).apply {
+                    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                        add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    }
+                }
+            )
+            val state = cameraViewModel.state.collectAsStateWithLifecycle()
+
+            loadProject()
+
+            if (cameraPermissionState.allPermissionsGranted) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    CameraComponent(lifecycleOwner, cameraProviderFuture)
+                    CameraToolsComponent()
+                    when (state.value) {
+                        CameraViewModel.State.Finished -> finish()
+                        CameraViewModel.State.Idle -> Unit
+                        is CameraViewModel.State.ContentReady ->
+                            TextContentComponent(state.value as CameraViewModel.State.ContentReady)
+                    }
+                }
+            } else {
+                if (cameraPermissionState.shouldShowRationale) {
+                    // TODO: Give the user a message if he denies the permission
+                    requireActivity().supportFragmentManager.popBackStack()
+                }
+                cameraPermissionState.launchMultiplePermissionRequest()
+            }
         }
 
+        return binding.root
+    }
+
+    private fun loadProject() {
         val projectId = arguments?.getLong(PROJECT_ID_FRAGMENT_TAG_CAMERA)
         if (projectId == null) {
             Toast.makeText(requireActivity(), "Something went wrong", Toast.LENGTH_SHORT).show()
@@ -97,81 +192,147 @@ class CameraFragment : Fragment() {
         cameraViewModel.loadCurrentProject(projectId)
     }
 
-    override fun onResume() {
-        super.onResume()
-        viewLifecycleOwner.lifecycleScope.launch {
-            cameraViewModel.state.collect {
-                when (it) {
-                    CameraViewModel.State.Finished -> finish()
-                    CameraViewModel.State.Idle -> Unit
-                    is CameraViewModel.State.ContentReady -> drawComposeListView(it)
-                }
-            }
-        }
-    }
+    @Composable
+    fun BoxScope.CameraToolsComponent(modifier: Modifier = Modifier) {
+        val isRecording = remember { mutableStateOf(false) }
 
-    @SuppressLint("CoroutineCreationDuringComposition")
-    private fun drawComposeListView(state: CameraViewModel.State.ContentReady) {
-        binding.cvSubtitles.setContent {
-            val listState = rememberLazyListState()
-            val coroutineScope = rememberCoroutineScope()
-            val data = state.project.content.split(" ").toList() + listOf(" ", " ")
-            val scrollEvent = cameraViewModel.scrollingState.collectAsStateWithLifecycle(
-                initialValue = null
-            )
-
-            when (val scrollingStateValue = scrollEvent.value) {
-                null -> Unit
-                else -> coroutineScope.launch {
-                    if (scrollingStateValue >= data.size) return@launch
-                    listState.animateScrollToItem(scrollingStateValue)
-                }
-            }
-
-            LazyColumn(
-                content = {
-                    items(data.size) { position ->
-                        Text(
-                            text = data[position],
-                            modifier = Modifier.fillMaxSize(),
-                            fontSize = 32.sp,
-                            textAlign = TextAlign.Center,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
+        Box(
+            modifier = modifier
+                .align(Alignment.BottomCenter)
+                .wrapContentHeight()
+                .fillMaxWidth()
+        ) {
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .wrapContentHeight()
                     .background(
                         Color("#CC0F0F0F".toColorInt())
                     ),
-                state = listState
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                AnimatedVisibility(visible = !isRecording.value) {
+                    Image(
+                        modifier = modifier
+                            .width(100.dp)
+                            .height(100.dp)
+                            .clickable {
+                                requireActivity().supportFragmentManager.popBackStack()
+                            },
+                        painter = painterResource(id = R.drawable.baseline_arrow_back_24),
+                        contentDescription = stringResource(id = R.string.back)
+                    )
+                }
+
+                Crossfade(
+                    modifier = Modifier.wrapContentSize(),
+                    targetState = isRecording.value,
+                    animationSpec = tween(1000)
+                ) { targetState ->
+                    Image(
+                        modifier = Modifier
+                            .clickable {
+                                captureVideo(
+                                    onRecordingFinished = {
+                                        isRecording.value = true
+                                        cameraViewModel.startLoopingSubtitles()
+                                    },
+                                    onRecordingStopped = { recordEvent ->
+                                        isRecording.value = false
+                                        tryConclude(recordEvent)
+                                    }
+                                )
+                            }
+                            .width(100.dp)
+                            .height(100.dp),
+                        painter = painterResource(
+                            id = if (targetState) {
+                                R.drawable.stop_recording_light
+                            } else {
+                                R.drawable.record_light_mode_button
+                            }
+                        ),
+                        contentDescription = stringResource(id = R.string.capture_video)
+                    )
+                }
+            }
+        }
+    }
+
+    private fun tryConclude(recordEvent: VideoRecordEvent.Finalize) {
+        cameraViewModel.stopLoopingSubtitles()
+        if (!recordEvent.hasError()) {
+            val msg = "Video capture succeeded: " +
+                "${recordEvent.outputResults.outputUri}"
+            Toast
+                .makeText(requireContext(), msg, Toast.LENGTH_SHORT)
+                .show()
+
+            cameraViewModel.saveProjectToDatabase(
+                recordEvent.outputResults.outputUri
             )
+        } else {
+            recording?.close()
+            recording = null
+            somethingWentWrong()
         }
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        cameraBinding = FragmentCameraBinding.inflate(inflater, container, false)
-        cameraExecutor = Executors.newSingleThreadExecutor()
-        binding.ivBackArrow.setOnClickListener {
-            requireActivity().supportFragmentManager.popBackStack()
-        }
-        binding.btnRecord.setOnClickListener {
-            captureVideo()
-        }
-        return checkNotNull(cameraBinding).root
+    @Composable
+    fun CameraComponent(
+        lifecycleOwner: LifecycleOwner,
+        cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
+    ) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                PreviewView(context).apply {
+                    cameraProviderFuture.addListener({
+                        // Used to bind the lifecycle of cameras to the lifecycle owner
+                        val cameraProvider: ProcessCameraProvider =
+                            cameraProviderFuture.get()
+
+                        // Preview
+                        val preview = Preview.Builder()
+                            .build()
+                            .also {
+                                it.setSurfaceProvider(surfaceProvider)
+                            }
+
+                        val recorder = Recorder.Builder()
+                            .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
+                            .build()
+                        videoCapture = VideoCapture.withOutput(recorder)
+
+                        // Select back camera as a default
+                        val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+
+                        try {
+                            // Unbind use cases before rebinding
+                            cameraProvider.unbindAll()
+
+                            // Bind use cases to camera
+                            cameraProvider
+                                .bindToLifecycle(
+                                    lifecycleOwner,
+                                    cameraSelector,
+                                    preview,
+                                    videoCapture
+                                )
+                        } catch (exc: Exception) {
+                            Log.e(TAG, "Use case binding failed", exc)
+                        }
+                    }, ContextCompat.getMainExecutor(requireActivity()))
+                }
+            }
+        )
     }
 
-    private fun requestPermissions() {
-        activityResultLauncher.launch(REQUIRED_PERMISSIONS)
-    }
-
-    private fun captureVideo() {
+    private fun captureVideo(
+        onRecordingFinished: () -> Unit,
+        onRecordingStopped: (VideoRecordEvent.Finalize) -> Unit
+    ) {
         val videoCapture = this.videoCapture ?: return
 
         val curRecording = recording
@@ -213,44 +374,10 @@ class CameraFragment : Fragment() {
             }
             .start(ContextCompat.getMainExecutor(requireActivity())) { recordEvent ->
                 when (recordEvent) {
-                    is VideoRecordEvent.Start -> onRecordingStarted()
-
+                    is VideoRecordEvent.Start -> onRecordingFinished()
                     is VideoRecordEvent.Finalize -> onRecordingStopped(recordEvent)
                 }
             }
-    }
-
-    private fun onRecordingStarted() {
-        binding.ivBackArrow.isVisible = false
-        binding.btnRecord.setImageDrawable(
-            ContextCompat.getDrawable(
-                requireActivity(),
-                R.drawable.stop_recording_light
-            )
-        )
-        cameraViewModel.startLoopingSubtitles()
-    }
-
-    private fun onRecordingStopped(recordEvent: VideoRecordEvent.Finalize) {
-        cameraViewModel.stopLoopingSubtitles()
-        if (!recordEvent.hasError()) {
-            val msg = "Video capture succeeded: " +
-                "${recordEvent.outputResults.outputUri}"
-            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT)
-                .show()
-
-            cameraViewModel.saveProjectToDatabase(
-                recordEvent.outputResults.outputUri
-            )
-        } else {
-            recording?.close()
-            recording = null
-            somethingWentWrong()
-        }
-        binding.ivBackArrow.isVisible = true
-        binding.btnRecord.setImageDrawable(
-            ContextCompat.getDrawable(requireActivity(), R.drawable.record_light_mode_button)
-        )
     }
 
     private fun somethingWentWrong() {
@@ -265,48 +392,6 @@ class CameraFragment : Fragment() {
         }
     }
 
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(requireActivity())
-
-        cameraProviderFuture.addListener({
-            // Used to bind the lifecycle of cameras to the lifecycle owner
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-
-            // Preview
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
-                }
-
-            val recorder = Recorder.Builder()
-                .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
-                .build()
-            videoCapture = VideoCapture.withOutput(recorder)
-
-            // Select back camera as a default
-            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-
-            try {
-                // Unbind use cases before rebinding
-                cameraProvider.unbindAll()
-
-                // Bind use cases to camera
-                cameraProvider
-                    .bindToLifecycle(this, cameraSelector, preview, videoCapture)
-            } catch (exc: Exception) {
-                Log.e(TAG, "Use case binding failed", exc)
-            }
-        }, ContextCompat.getMainExecutor(requireActivity()))
-    }
-
-    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
-        ContextCompat.checkSelfPermission(
-            requireActivity().baseContext,
-            it
-        ) == PackageManager.PERMISSION_GRANTED
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         cameraBinding = null
@@ -317,15 +402,6 @@ class CameraFragment : Fragment() {
         private const val PROJECT_ID_FRAGMENT_TAG_CAMERA = "project_id_fragment_tag_camera"
         const val TAG = "CameraXFragment"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
-        private val REQUIRED_PERMISSIONS =
-            mutableListOf(
-                Manifest.permission.CAMERA,
-                Manifest.permission.RECORD_AUDIO
-            ).apply {
-                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-                    add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                }
-            }.toTypedArray()
 
         fun newInstance(projectId: Long): CameraFragment {
             val fragment = CameraFragment()
