@@ -12,7 +12,7 @@ class ProjectsRepository @Inject constructor(
     private val projectsDataSource: ProjectsDataSource,
     private val storageDataSource: StorageDataSource
 ) {
-    fun createNewProject() = projectsDataSource.createNewProject()
+    suspend fun createNewProject() = projectsDataSource.createNewProject()
 
     suspend fun updateProject(project: Project) = projectsDataSource.update(project)
 

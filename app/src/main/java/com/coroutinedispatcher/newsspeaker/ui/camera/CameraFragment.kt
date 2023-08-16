@@ -43,9 +43,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -63,9 +65,11 @@ import androidx.core.content.PermissionChecker
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.coroutinedispatcher.newsspeaker.MainViewModel
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentCameraBinding
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -89,6 +93,13 @@ class CameraFragment : Fragment() {
     private var recording: Recording? = null
     private lateinit var cameraExecutor: ExecutorService
     private val cameraViewModel by viewModels<CameraViewModel>()
+    private val mainViewModel by activityViewModels<MainViewModel>()
+
+    override fun onResume() {
+        super.onResume()
+        mainViewModel.currentProject?.pId ?: finish()
+        cameraViewModel.loadCurrentProject(checkNotNull(mainViewModel.currentProject).pId)
+    }
 
     @SuppressLint("CoroutineCreationDuringComposition")
     @Composable
@@ -158,8 +169,6 @@ class CameraFragment : Fragment() {
             )
             val state = cameraViewModel.state.collectAsStateWithLifecycle()
 
-            loadProject()
-
             if (cameraPermissionState.allPermissionsGranted) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     CameraComponent(lifecycleOwner, cameraProviderFuture)
@@ -176,26 +185,18 @@ class CameraFragment : Fragment() {
                     // TODO: Give the user a message if he denies the permission
                     requireActivity().supportFragmentManager.popBackStack()
                 }
-                cameraPermissionState.launchMultiplePermissionRequest()
+                LaunchedEffect(key1 = Unit, block = {
+                    cameraPermissionState.launchMultiplePermissionRequest()
+                })
             }
         }
 
         return binding.root
     }
 
-    private fun loadProject() {
-        val projectId = arguments?.getLong(PROJECT_ID_FRAGMENT_TAG_CAMERA)
-        if (projectId == null) {
-            Toast.makeText(requireActivity(), "Something went wrong", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-        cameraViewModel.loadCurrentProject(projectId)
-    }
-
     @Composable
     fun BoxScope.CameraToolsComponent(modifier: Modifier = Modifier) {
-        val isRecording = remember { mutableStateOf(false) }
+        val isRecording = rememberSaveable { mutableStateOf(false) }
 
         Box(
             modifier = modifier
@@ -271,9 +272,7 @@ class CameraFragment : Fragment() {
                 .makeText(requireContext(), msg, Toast.LENGTH_SHORT)
                 .show()
 
-            cameraViewModel.saveProjectToDatabase(
-                recordEvent.outputResults.outputUri
-            )
+            mainViewModel.updatePath(recordEvent.outputResults.outputUri)
         } else {
             recording?.close()
             recording = null
@@ -401,16 +400,9 @@ class CameraFragment : Fragment() {
     }
 
     companion object {
-        private const val PROJECT_ID_FRAGMENT_TAG_CAMERA = "project_id_fragment_tag_camera"
         const val TAG = "CameraXFragment"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
 
-        fun newInstance(projectId: Long): CameraFragment {
-            val fragment = CameraFragment()
-            val arguments = Bundle()
-            arguments.putLong(PROJECT_ID_FRAGMENT_TAG_CAMERA, projectId)
-            fragment.arguments = arguments
-            return fragment
-        }
+        fun newInstance(): CameraFragment = CameraFragment()
     }
 }

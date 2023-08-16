@@ -2,6 +2,7 @@ package com.coroutinedispatcher.newsspeaker.ui.textinput
 
 import android.app.AlertDialog
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,15 +18,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction.Companion.Next
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.coroutinedispatcher.newsspeaker.MainViewModel
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentTextInputBinding
 import com.coroutinedispatcher.newsspeaker.theme.AppTheme
@@ -37,11 +40,11 @@ class TextInputFragment : Fragment() {
 
     private var textInputBinding: FragmentTextInputBinding? = null
     private val textInputViewModel by viewModels<TextInputViewModel>()
-    private var currentProjectId: Long = -1
+    private val mainViewModel by activityViewModels<MainViewModel>()
 
-    override fun onResume() {
-        super.onResume()
-        textInputViewModel.getOrCreate(currentProjectId)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        mainViewModel.createNewProject()
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -53,14 +56,14 @@ class TextInputFragment : Fragment() {
         textInputBinding = FragmentTextInputBinding.inflate(inflater, container, false)
 
         requireNotNull(textInputBinding).textInputComposable.setContent {
-            val textInputUIState = textInputViewModel.state.collectAsStateWithLifecycle()
-            val titleText = remember { textInputViewModel.titleText }
-            val contentText = remember { textInputViewModel.contentText }
+            val initialTitle = mainViewModel.currentProject?.title.orEmpty()
+            val initialContent = mainViewModel.currentProject?.content.orEmpty()
 
-            contentText.value = textInputUIState.value.project?.content.orEmpty()
-            titleText.value = textInputUIState.value.project?.title.orEmpty()
+            Log.d(TAG, "TextFragment: $initialTitle")
+            Log.d(TAG, "TextFragment: $initialContent")
 
-            currentProjectId = textInputUIState.value.project?.pId ?: -1
+            val titleText = rememberSaveable { mutableStateOf(initialTitle) }
+            val contentText = rememberSaveable { mutableStateOf(initialContent) }
 
             AppTheme {
                 Column(
@@ -82,10 +85,7 @@ class TextInputFragment : Fragment() {
                         keyboardOptions = KeyboardOptions(imeAction = Next),
                         keyboardActions = KeyboardActions(
                             onNext = {
-                                textInputViewModel.update(
-                                    title = titleText.value,
-                                    content = contentText.value
-                                )
+                                mainViewModel.updateTitle(title = titleText.value)
                             }
                         )
                     )
@@ -104,10 +104,7 @@ class TextInputFragment : Fragment() {
                         keyboardOptions = KeyboardOptions(imeAction = Next),
                         keyboardActions = KeyboardActions(
                             onNext = {
-                                textInputViewModel.update(
-                                    content = contentText.value,
-                                    title = titleText.value
-                                )
+                                mainViewModel.updateContent(content = contentText.value)
                             }
                         )
                     )
@@ -130,10 +127,8 @@ class TextInputFragment : Fragment() {
                                     return@Button
                                 }
 
-                                textInputViewModel.update(
-                                    title = titleText.value,
-                                    content = contentText.value
-                                )
+                                mainViewModel.updateContent(content = titleText.value)
+                                mainViewModel.updateTitle(title = titleText.value)
 
                                 switchToCameraFragment()
                             },
@@ -146,7 +141,6 @@ class TextInputFragment : Fragment() {
             }
         }
 
-        currentProjectId = arguments?.getLong(PROJECT_ID_FRAGMENT_ARG) ?: -1
         return requireNotNull(textInputBinding).root
     }
 
@@ -159,7 +153,7 @@ class TextInputFragment : Fragment() {
                 R.anim.slide_out
             )
             addToBackStack(CameraFragment.TAG)
-            replace(R.id.container, CameraFragment.newInstance(currentProjectId))
+            replace(R.id.container, CameraFragment.newInstance())
         }
     }
 
@@ -195,14 +189,7 @@ class TextInputFragment : Fragment() {
     }
 
     companion object {
-        const val PROJECT_ID_FRAGMENT_ARG = "project_id_fragment_arg"
-        fun newInstance(projectId: Long = -1): TextInputFragment {
-            val fragment = TextInputFragment()
-            val arguments = Bundle()
-            arguments.putLong(PROJECT_ID_FRAGMENT_ARG, projectId)
-            fragment.arguments = arguments
-            return fragment
-        }
+        fun newInstance(): TextInputFragment = TextInputFragment()
 
         const val TAG = "TextInputFragment"
     }

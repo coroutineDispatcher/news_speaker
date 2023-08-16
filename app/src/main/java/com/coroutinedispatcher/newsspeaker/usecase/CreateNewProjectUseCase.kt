@@ -6,5 +6,5 @@ import javax.inject.Inject
 class CreateNewProjectUseCase @Inject constructor(
     private val repository: ProjectsRepository
 ) {
-    operator fun invoke() = repository.createNewProject()
+    suspend operator fun invoke() = repository.createNewProject()
 }
