@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -74,7 +74,7 @@ class HomeFragment : Fragment() {
                     topBar = {
                         AppTopAppBar(
                             modifier = Modifier,
-                            state = scrollBehavior.state,
+                            scrollBehavior = scrollBehavior,
                             appBarMessage = stringResource(id = R.string.app_name)
                         )
                     },
@@ -147,17 +147,27 @@ class HomeFragment : Fragment() {
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     private fun Projects(data: List<Project>, onItemClicked: (Long) -> Unit) {
+        val projects = remember { data }
+
         LazyVerticalStaggeredGrid(
             modifier = Modifier.fillMaxSize(),
             columns = StaggeredGridCells.Fixed(2)
         ) {
-            items(data) { project ->
-                ImageThumbnail(
-                    modifier = Modifier.padding(2.dp),
-                    project = project,
-                    onItemClicked = onItemClicked
-                )
-            }
+            items(
+                count = projects.size,
+                key = {
+                    projects[it].pId
+                },
+                itemContent = { index ->
+                    val project = data[index]
+
+                    ImageThumbnail(
+                        modifier = Modifier.padding(2.dp),
+                        project = project,
+                        onItemClicked = onItemClicked
+                    )
+                }
+            )
         }
     }
 
