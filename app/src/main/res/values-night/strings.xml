@@ -6,4 +6,9 @@
     <string name="new_projects_stay_here">New projects stay here</string>
     <string name="capture_video">Capture video</string>
     <string name="back">Back</string>
+    <string name="no_content">There is not title set for this project. Please set a title to continue\" +\n                    \" recording.</string>
+    <string name="content_missing">\"Content missing\"</string>
+    <string name="no_title">\"There is not title set for this project. Please set a title to continue\" +\n                    \" recording.\"</string>
+    <string name="title_missin">\"Title missing\"</string>
+    <string name="ok">OK</string>
 </resources>

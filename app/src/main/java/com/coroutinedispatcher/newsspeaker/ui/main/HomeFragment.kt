@@ -30,20 +30,20 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.coroutinedispatcher.newsspeaker.ImageThumbnail
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.database.Project
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentMainBinding
 import com.coroutinedispatcher.newsspeaker.theme.AppTheme
 import com.coroutinedispatcher.newsspeaker.ui.reusable.EmptyScreen
+import com.coroutinedispatcher.newsspeaker.ui.reusable.ImageThumbnail
 import com.coroutinedispatcher.newsspeaker.ui.textinput.TextInputFragment
 import com.coroutinedispatcher.newsspeaker.ui.videodetails.VideoDetailsFragment
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class MainFragment : Fragment() {
+class HomeFragment : Fragment() {
 
-    private val viewModel by viewModels<MainViewModel>()
+    private val viewModel by viewModels<HomeViewModel>()
     private var mainFragmentBinding: FragmentMainBinding? = null
     private val binding
         get() = checkNotNull(mainFragmentBinding)
@@ -73,9 +73,9 @@ class MainFragment : Fragment() {
                             verticalArrangement = Arrangement.Center
                         ) {
                             when (state.value) {
-                                MainViewModel.State.Empty -> EmptyScreen()
-                                is MainViewModel.State.Success -> Projects(
-                                    (state.value as MainViewModel.State.Success).data,
+                                HomeViewModel.State.Empty -> EmptyScreen()
+                                is HomeViewModel.State.Success -> Projects(
+                                    (state.value as HomeViewModel.State.Success).data,
                                     onItemClicked = { projectId ->
                                         requireActivity().supportFragmentManager.commit {
                                             setCustomAnimations(
@@ -93,7 +93,7 @@ class MainFragment : Fragment() {
                                     }
                                 )
 
-                                MainViewModel.State.Loading -> CircularProgressIndicator()
+                                HomeViewModel.State.Loading -> CircularProgressIndicator()
                             }
                         }
 
@@ -148,6 +148,6 @@ class MainFragment : Fragment() {
     }
 
     companion object {
-        fun newInstance() = MainFragment()
+        fun newInstance() = HomeFragment()
     }
 }

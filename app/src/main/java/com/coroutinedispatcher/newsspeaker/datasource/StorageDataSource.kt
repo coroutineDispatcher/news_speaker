@@ -1,4 +1,4 @@
-package com.coroutinedispatcher.newsspeaker.repository
+package com.coroutinedispatcher.newsspeaker.datasource
 
 import android.content.Context
 import android.content.Intent

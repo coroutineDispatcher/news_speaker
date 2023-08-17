@@ -82,6 +82,7 @@ import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+// TODO Remove Back button
 @AndroidEntryPoint
 class CameraFragment : Fragment() {
 

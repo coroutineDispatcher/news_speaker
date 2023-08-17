@@ -1,4 +1,4 @@
-package com.coroutinedispatcher.newsspeaker
+package com.coroutinedispatcher.newsspeaker.ui.reusable
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -23,6 +23,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.database.Project
 import kotlin.math.roundToInt
 

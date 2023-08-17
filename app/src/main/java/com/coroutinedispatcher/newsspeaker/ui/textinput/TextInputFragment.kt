@@ -15,39 +15,54 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction.Companion.Next
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
-import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.coroutinedispatcher.newsspeaker.MainViewModel
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentTextInputBinding
 import com.coroutinedispatcher.newsspeaker.theme.AppTheme
 import com.coroutinedispatcher.newsspeaker.ui.camera.CameraFragment
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class TextInputFragment : Fragment() {
 
     private var textInputBinding: FragmentTextInputBinding? = null
-    private val textInputViewModel by viewModels<TextInputViewModel>()
+    private val binding get() = checkNotNull(textInputBinding)
     private val mainViewModel by activityViewModels<MainViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mainViewModel.createNewProject()
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                mainViewModel.navigateToCamera.collectLatest { shouldNavigateToCamera ->
+                    if (shouldNavigateToCamera) switchToCameraFragment()
+                }
+            }
+        }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -55,9 +70,11 @@ class TextInputFragment : Fragment() {
     ): View {
         textInputBinding = FragmentTextInputBinding.inflate(inflater, container, false)
 
-        requireNotNull(textInputBinding).textInputComposable.setContent {
+        binding.textInputComposable.setContent {
             val initialTitle = mainViewModel.currentProject?.title.orEmpty()
             val initialContent = mainViewModel.currentProject?.content.orEmpty()
+            val localFocusManager = LocalFocusManager.current
+            val keyboardController = LocalSoftwareKeyboardController.current
 
             Log.d(TAG, "TextFragment: $initialTitle")
             Log.d(TAG, "TextFragment: $initialContent")
@@ -86,6 +103,7 @@ class TextInputFragment : Fragment() {
                         keyboardActions = KeyboardActions(
                             onNext = {
                                 mainViewModel.updateTitle(title = titleText.value)
+                                localFocusManager.moveFocus(FocusDirection.Down)
                             }
                         )
                     )
@@ -105,6 +123,11 @@ class TextInputFragment : Fragment() {
                         keyboardActions = KeyboardActions(
                             onNext = {
                                 mainViewModel.updateContent(content = contentText.value)
+                                localFocusManager.moveFocus(FocusDirection.Down)
+                            },
+                            onDone = {
+                                localFocusManager.clearFocus()
+                                keyboardController?.hide()
                             }
                         )
                     )
@@ -127,10 +150,10 @@ class TextInputFragment : Fragment() {
                                     return@Button
                                 }
 
-                                mainViewModel.updateContent(content = titleText.value)
-                                mainViewModel.updateTitle(title = titleText.value)
-
-                                switchToCameraFragment()
+                                mainViewModel.updateTitleAndContent(
+                                    titleText.value,
+                                    contentText.value
+                                )
                             },
                             modifier = Modifier.align(Alignment.BottomEnd)
                         ) {
@@ -159,12 +182,9 @@ class TextInputFragment : Fragment() {
 
     private fun showTitleBlockerDialog() {
         AlertDialog.Builder(requireActivity())
-            .setTitle("Title missing")
-            .setMessage(
-                "There is not title set for this project. Please set a title to continue" +
-                    " recording."
-            )
-            .setPositiveButton("OK") { dialog, _ ->
+            .setTitle(R.string.title_missin)
+            .setMessage(R.string.no_title)
+            .setPositiveButton(R.string.ok) { dialog, _ ->
                 dialog.dismiss()
             }
             .show()
@@ -172,12 +192,9 @@ class TextInputFragment : Fragment() {
 
     private fun showContentBlockerDialog() {
         AlertDialog.Builder(requireActivity())
-            .setTitle("Content missing")
-            .setMessage(
-                "There is not title set for this project. Please set a title to continue" +
-                    " recording."
-            )
-            .setPositiveButton("OK") { dialog, _ ->
+            .setTitle(R.string.content_missing)
+            .setMessage(R.string.no_content)
+            .setPositiveButton(R.string.ok) { dialog, _ ->
                 dialog.dismiss()
             }
             .show()
