@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.coroutinedispatcher.newsspeaker.database.Project
@@ -27,7 +29,8 @@ import com.coroutinedispatcher.newsspeaker.theme.md_theme_dark_onPrimary
 import com.coroutinedispatcher.newsspeaker.theme.md_theme_dark_outlineVariant
 import com.coroutinedispatcher.newsspeaker.theme.md_theme_light_onPrimary
 import com.coroutinedispatcher.newsspeaker.theme.md_theme_light_outlineVariant
-import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ImageThumbnail(modifier: Modifier = Modifier, project: Project, onItemClicked: (Long) -> Unit) {
@@ -67,34 +70,38 @@ fun ImageThumbnail(modifier: Modifier = Modifier, project: Project, onItemClicke
                 )
             }
         } else {
-            val thumbnailBitmap = getVideoThumbnail(context, project.videoPath)
+            val thumbnailBitmap = remember { mutableStateOf<Bitmap?>(null) }
 
-            Image(
-                modifier = modifier.wrapContentSize(),
-                bitmap = checkNotNull(thumbnailBitmap).asImageBitmap(),
-                contentDescription = ""
-            )
+            LaunchedEffect(key1 = Unit, block = {
+                thumbnailBitmap.value = getVideoThumbnail(context, project.videoPath)
+            })
+
+            thumbnailBitmap.value?.let { thumbNail ->
+                Image(
+                    modifier = modifier.wrapContentSize(),
+                    bitmap = thumbNail.asImageBitmap(),
+                    contentDescription = ""
+                )
+            }
         }
     }
 }
 
-private fun getVideoThumbnail(context: Context, path: String): Bitmap? {
+private suspend fun getVideoThumbnail(context: Context, path: String): Bitmap? {
     val videoUri = Uri.parse(path)
-
     val retriever = MediaMetadataRetriever()
-    try {
-        retriever.setDataSource(context, videoUri)
-        return retriever.frameAtTime?.let {
-            Bitmap.createScaledBitmap(it, 1080, 1920, false)
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-    } finally {
-        retriever.release()
-    }
-    return null
-}
 
-fun pxToDp(px: Int, density: Float): Dp {
-    return (px / density).roundToInt().dp
+    return withContext(Dispatchers.Default) {
+        try {
+            retriever.setDataSource(context, videoUri)
+            retriever.frameAtTime?.let {
+                Bitmap.createScaledBitmap(it, 1080, 1920, false)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        } finally {
+            retriever.release()
+        }
+    }
 }

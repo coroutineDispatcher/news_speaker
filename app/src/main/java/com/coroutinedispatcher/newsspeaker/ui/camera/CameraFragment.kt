@@ -79,7 +79,6 @@ import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-// TODO Remove Back button
 @AndroidEntryPoint
 class CameraFragment : Fragment() {
 
@@ -96,15 +95,14 @@ class CameraFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         mainViewModel.currentProject?.pId ?: finish()
-        cameraViewModel.loadCurrentProject(checkNotNull(mainViewModel.currentProject).pId)
     }
 
     @SuppressLint("CoroutineCreationDuringComposition")
     @Composable
-    private fun TextContentComponent(state: CameraViewModel.State.ContentReady) {
+    private fun TextContentComponent(content: String) {
         val listState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
-        val data = state.project.content.split(" ").toList() + listOf(" ", " ")
+        val data = content.split(" ").toList() + listOf(" ", " ")
         val scrollEvent = cameraViewModel.scrollingState.collectAsStateWithLifecycle(
             initialValue = null
         )
@@ -165,17 +163,12 @@ class CameraFragment : Fragment() {
                     }
                 }
             )
-            val state = cameraViewModel.state.collectAsStateWithLifecycle()
 
             if (cameraPermissionState.allPermissionsGranted) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     CameraComponent(lifecycleOwner, cameraProviderFuture)
                     CameraToolsComponent()
-                    when (state.value) {
-                        CameraViewModel.State.Idle -> Unit
-                        is CameraViewModel.State.ContentReady ->
-                            TextContentComponent(state.value as CameraViewModel.State.ContentReady)
-                    }
+                    TextContentComponent(checkNotNull(mainViewModel.currentProject).content)
                 }
             } else {
                 if (cameraPermissionState.shouldShowRationale) {

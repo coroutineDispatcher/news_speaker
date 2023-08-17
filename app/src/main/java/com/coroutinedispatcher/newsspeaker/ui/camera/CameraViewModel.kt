@@ -7,10 +7,7 @@ import com.coroutinedispatcher.newsspeaker.usecase.GetCurrentProjectUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,9 +17,6 @@ import kotlin.time.Duration.Companion.seconds
 class CameraViewModel @Inject constructor(
     private val getCurrentProjectUseCase: GetCurrentProjectUseCase
 ) : ViewModel() {
-    private lateinit var currentProject: Project
-    private val _state = MutableStateFlow<State>(State.Idle)
-    val state = _state.asStateFlow()
     private val _scrollingState = MutableSharedFlow<Int?>()
     val scrollingState = _scrollingState.asSharedFlow()
     private var position = 0
@@ -30,13 +24,6 @@ class CameraViewModel @Inject constructor(
     sealed class State {
         object Idle : State()
         data class ContentReady(val project: Project) : State()
-    }
-
-    fun loadCurrentProject(id: Long) {
-        viewModelScope.launch {
-            currentProject = getCurrentProjectUseCase(id)
-            _state.update { State.ContentReady(currentProject) }
-        }
     }
 
     fun startLoopingSubtitles() {
