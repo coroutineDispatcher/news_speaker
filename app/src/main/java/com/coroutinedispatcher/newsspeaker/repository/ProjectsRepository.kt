@@ -24,9 +24,8 @@ class ProjectsRepository @Inject constructor(
     fun getAllProjects(): Flow<List<Project>> = projectsDataSource.getAllProjects()
     suspend fun deleteCurrentProject(projectId: Long) {
         val currentProject = projectsDataSource.getCurrentProjectById(projectId)
-        if (storageDataSource.delete(currentProject.videoPath)) {
-            projectsDataSource.delete(currentProject)
-        }
+        storageDataSource.delete(currentProject.videoPath)
+        projectsDataSource.delete(currentProject)
     }
 
     suspend fun shareProject(projectId: Long): Intent? {

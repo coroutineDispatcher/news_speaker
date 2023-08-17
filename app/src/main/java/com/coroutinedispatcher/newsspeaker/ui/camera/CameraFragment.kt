@@ -22,16 +22,13 @@ import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -208,27 +205,13 @@ class CameraFragment : Fragment() {
                     Color("#CC0F0F0F".toColorInt())
                 )
         ) {
-            Row(
+            Box(
                 modifier = Modifier
                     .padding(16.dp)
                     .fillMaxWidth()
                     .wrapContentHeight(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                contentAlignment = Alignment.Center
             ) {
-                AnimatedVisibility(visible = !isRecording.value) {
-                    Image(
-                        modifier = modifier
-                            .width(50.dp)
-                            .height(50.dp)
-                            .clickable {
-                                requireActivity().supportFragmentManager.popBackStack()
-                            },
-                        painter = painterResource(id = R.drawable.baseline_arrow_back_24),
-                        contentDescription = stringResource(id = R.string.back)
-                    )
-                }
-
                 Crossfade(
                     modifier = Modifier.wrapContentSize(),
                     targetState = isRecording.value,

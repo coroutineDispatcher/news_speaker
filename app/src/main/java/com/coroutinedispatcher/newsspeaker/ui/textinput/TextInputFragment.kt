@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,16 +16,23 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction.Companion.Next
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
@@ -38,6 +46,7 @@ import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentTextInputBinding
 import com.coroutinedispatcher.newsspeaker.theme.AppTheme
 import com.coroutinedispatcher.newsspeaker.ui.camera.CameraFragment
+import com.coroutinedispatcher.newsspeaker.ui.reusable.AppTopAppBar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -62,7 +71,12 @@ class TextInputFragment : Fragment() {
         }
     }
 
-    @OptIn(ExperimentalComposeUiApi::class)
+    override fun onStop() {
+        super.onStop()
+        mainViewModel.deleteProjectIfEmptyContent()
+    }
+
+    @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -75,6 +89,7 @@ class TextInputFragment : Fragment() {
             val initialContent = mainViewModel.currentProject?.content.orEmpty()
             val localFocusManager = LocalFocusManager.current
             val keyboardController = LocalSoftwareKeyboardController.current
+            val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
             Log.d(TAG, "TextFragment: $initialTitle")
             Log.d(TAG, "TextFragment: $initialContent")
@@ -82,82 +97,102 @@ class TextInputFragment : Fragment() {
             val titleText = rememberSaveable { mutableStateOf(initialTitle) }
             val contentText = rememberSaveable { mutableStateOf(initialContent) }
 
-            AppTheme {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    OutlinedTextField(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        value = titleText.value,
-                        placeholder = {
-                            Text(text = "Title")
-                        },
-                        onValueChange = { newValue ->
-                            titleText.value = newValue
-                        },
-                        maxLines = 1,
-                        keyboardOptions = KeyboardOptions(imeAction = Next),
-                        keyboardActions = KeyboardActions(
-                            onNext = {
-                                mainViewModel.updateTitle(title = titleText.value)
-                                localFocusManager.moveFocus(FocusDirection.Down)
-                            }
-                        )
-                    )
-                    OutlinedTextField(
-                        modifier = Modifier
-                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
-                            .fillMaxWidth()
-                            .weight(1f),
-                        value = contentText.value,
-                        placeholder = {
-                            Text(text = "Content")
-                        },
-                        onValueChange = { newValue ->
-                            contentText.value = newValue
-                        },
-                        keyboardOptions = KeyboardOptions(imeAction = Next),
-                        keyboardActions = KeyboardActions(
-                            onNext = {
-                                mainViewModel.updateContent(content = contentText.value)
-                                localFocusManager.moveFocus(FocusDirection.Down)
-                            },
-                            onDone = {
-                                localFocusManager.clearFocus()
-                                keyboardController?.hide()
-                            }
-                        )
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .padding(16.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                if (titleText.value.isEmpty() || titleText.value.isBlank()) {
-                                    // TODO Update these dialogs
-                                    showTitleBlockerDialog()
-                                    return@Button
-                                }
-                                if (contentText.value.isEmpty() || contentText.value.isBlank()) {
-                                    // TODO Update these dialogs
-                                    showContentBlockerDialog()
-                                    return@Button
-                                }
+            DisposableEffect(key1 = Unit, effect = {
+                onDispose { }
+            })
 
-                                mainViewModel.updateTitleAndContent(
-                                    titleText.value,
-                                    contentText.value
-                                )
+            AppTheme {
+                Scaffold(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .nestedScroll(scrollBehavior.nestedScrollConnection),
+                    topBar = {
+                        AppTopAppBar(
+                            modifier = Modifier,
+                            state = scrollBehavior.state,
+                            appBarMessage = stringResource(id = R.string.app_name)
+                        )
+                    }
+                ) { paddingValues ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                    ) {
+                        OutlinedTextField(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            value = titleText.value,
+                            placeholder = {
+                                Text(text = "Title")
                             },
-                            modifier = Modifier.align(Alignment.BottomEnd)
+                            onValueChange = { newValue ->
+                                titleText.value = newValue
+                            },
+                            maxLines = 1,
+                            keyboardOptions = KeyboardOptions(imeAction = Next),
+                            keyboardActions = KeyboardActions(
+                                onNext = {
+                                    mainViewModel.updateTitle(title = titleText.value)
+                                    localFocusManager.moveFocus(FocusDirection.Down)
+                                }
+                            )
+                        )
+                        OutlinedTextField(
+                            modifier = Modifier
+                                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                                .fillMaxWidth()
+                                .weight(1f),
+                            value = contentText.value,
+                            placeholder = {
+                                Text(text = "Content")
+                            },
+                            onValueChange = { newValue ->
+                                contentText.value = newValue
+                            },
+                            keyboardOptions = KeyboardOptions(imeAction = Next),
+                            keyboardActions = KeyboardActions(
+                                onNext = {
+                                    mainViewModel.updateContent(content = contentText.value)
+                                    localFocusManager.moveFocus(FocusDirection.Down)
+                                },
+                                onDone = {
+                                    localFocusManager.clearFocus()
+                                    keyboardController?.hide()
+                                }
+                            )
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .padding(16.dp)
                         ) {
-                            Text(text = "Next")
+                            Button(
+                                onClick = {
+                                    if (titleText.value.isEmpty() || titleText.value.isBlank()) {
+                                        // TODO Update these dialogs
+                                        showTitleBlockerDialog()
+                                        return@Button
+                                    }
+                                    if (contentText.value.isEmpty() || contentText.value.isBlank()) {
+                                        // TODO Update these dialogs
+                                        showContentBlockerDialog()
+                                        return@Button
+                                    }
+
+                                    mainViewModel.updateTitleAndContent(
+                                        titleText.value,
+                                        contentText.value
+                                    )
+                                },
+                                modifier = Modifier.align(Alignment.BottomEnd)
+                            ) {
+                                Text(text = "Next")
+                            }
                         }
                     }
                 }

@@ -18,13 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.database.Project
+import com.coroutinedispatcher.newsspeaker.theme.md_theme_light_outlineVariant
 import kotlin.math.roundToInt
 
 @Composable
@@ -39,20 +39,9 @@ fun ImageThumbnail(modifier: Modifier = Modifier, project: Project, onItemClicke
         if (project.videoPath.isEmpty()) {
             Box(
                 modifier = modifier
-                    .width(
-                        with(LocalDensity.current) {
-                            pxToDp(1080 / 2, this.density)
-                        }
-                    )
-                    .height(
-                        with(LocalDensity.current) {
-                            pxToDp(
-                                1920 / 2,
-                                this.density
-                            )
-                        }
-                    )
-                    .background(color = Color.LightGray)
+                    .width(300.dp)
+                    .height(150.dp)
+                    .background(color = md_theme_light_outlineVariant)
             ) {
                 Image(
                     modifier = modifier.align(Alignment.Center),
