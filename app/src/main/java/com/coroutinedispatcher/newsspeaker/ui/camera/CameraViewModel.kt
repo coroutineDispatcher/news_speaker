@@ -29,7 +29,6 @@ class CameraViewModel @Inject constructor(
 
     sealed class State {
         object Idle : State()
-        object Finished : State()
         data class ContentReady(val project: Project) : State()
     }
 

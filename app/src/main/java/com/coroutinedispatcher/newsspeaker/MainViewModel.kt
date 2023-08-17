@@ -12,8 +12,6 @@ import com.coroutinedispatcher.newsspeaker.usecase.GetCurrentProjectUseCase
 import com.coroutinedispatcher.newsspeaker.usecase.UpdateProjectUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -27,8 +25,6 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     val projectState = savedStateHandle.getStateFlow(CurrentProjectKey, null)
-    private val _navigateToCamera = MutableSharedFlow<Boolean>()
-    val navigateToCamera = _navigateToCamera.asSharedFlow()
     val currentProject: Project?
         get() = (savedStateHandle.get(CurrentProjectKey) as? Project)
 
@@ -77,18 +73,6 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             updateProjectUseCase(project)
             savedStateHandle[CurrentProjectKey] = project
-        }
-    }
-
-    fun updateTitleAndContent(title: String, content: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val project =
-                checkNotNull(currentProject) { "At this stage the project cannot be null" }
-            val updatedProject = project.copy(content = content, title = title)
-            updateProjectUseCase(updatedProject)
-            savedStateHandle[CurrentProjectKey] = updatedProject
-            Log.d(TAG, "updateContent: $updatedProject")
-            _navigateToCamera.emit(true)
         }
     }
 

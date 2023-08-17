@@ -38,9 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import com.coroutinedispatcher.newsspeaker.MainViewModel
 import com.coroutinedispatcher.newsspeaker.R
 import com.coroutinedispatcher.newsspeaker.databinding.FragmentTextInputBinding
@@ -48,8 +45,6 @@ import com.coroutinedispatcher.newsspeaker.theme.AppTheme
 import com.coroutinedispatcher.newsspeaker.ui.camera.CameraFragment
 import com.coroutinedispatcher.newsspeaker.ui.reusable.AppTopAppBar
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class TextInputFragment : Fragment() {
@@ -61,14 +56,6 @@ class TextInputFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mainViewModel.createNewProject()
-
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                mainViewModel.navigateToCamera.collectLatest { shouldNavigateToCamera ->
-                    if (shouldNavigateToCamera) switchToCameraFragment()
-                }
-            }
-        }
     }
 
     override fun onStop() {
@@ -130,6 +117,7 @@ class TextInputFragment : Fragment() {
                                 Text(text = "Title")
                             },
                             onValueChange = { newValue ->
+                                mainViewModel.updateTitle(newValue)
                                 titleText.value = newValue
                             },
                             maxLines = 1,
@@ -151,6 +139,7 @@ class TextInputFragment : Fragment() {
                                 Text(text = "Content")
                             },
                             onValueChange = { newValue ->
+                                mainViewModel.updateContent(newValue)
                                 contentText.value = newValue
                             },
                             keyboardOptions = KeyboardOptions(imeAction = Next),
@@ -183,11 +172,7 @@ class TextInputFragment : Fragment() {
                                         showContentBlockerDialog()
                                         return@Button
                                     }
-
-                                    mainViewModel.updateTitleAndContent(
-                                        titleText.value,
-                                        contentText.value
-                                    )
+                                    switchToCameraFragment()
                                 },
                                 modifier = Modifier.align(Alignment.BottomEnd)
                             ) {

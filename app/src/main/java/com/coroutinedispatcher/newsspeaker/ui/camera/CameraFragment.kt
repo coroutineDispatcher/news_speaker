@@ -172,7 +172,6 @@ class CameraFragment : Fragment() {
                     CameraComponent(lifecycleOwner, cameraProviderFuture)
                     CameraToolsComponent()
                     when (state.value) {
-                        CameraViewModel.State.Finished -> finish()
                         CameraViewModel.State.Idle -> Unit
                         is CameraViewModel.State.ContentReady ->
                             TextContentComponent(state.value as CameraViewModel.State.ContentReady)
@@ -221,7 +220,7 @@ class CameraFragment : Fragment() {
                         modifier = Modifier
                             .clickable {
                                 captureVideo(
-                                    onRecordingFinished = {
+                                    onRecordingStarted = {
                                         isRecording.value = true
                                         cameraViewModel.startLoopingSubtitles()
                                     },
@@ -262,6 +261,7 @@ class CameraFragment : Fragment() {
             recording = null
             somethingWentWrong()
         }
+        finish()
     }
 
     @Composable
@@ -315,7 +315,7 @@ class CameraFragment : Fragment() {
     }
 
     private fun captureVideo(
-        onRecordingFinished: () -> Unit,
+        onRecordingStarted: () -> Unit,
         onRecordingStopped: (VideoRecordEvent.Finalize) -> Unit
     ) {
         val videoCapture = this.videoCapture ?: return
@@ -359,7 +359,7 @@ class CameraFragment : Fragment() {
             }
             .start(ContextCompat.getMainExecutor(requireActivity())) { recordEvent ->
                 when (recordEvent) {
-                    is VideoRecordEvent.Start -> onRecordingFinished()
+                    is VideoRecordEvent.Start -> onRecordingStarted()
                     is VideoRecordEvent.Finalize -> onRecordingStopped(recordEvent)
                 }
             }
