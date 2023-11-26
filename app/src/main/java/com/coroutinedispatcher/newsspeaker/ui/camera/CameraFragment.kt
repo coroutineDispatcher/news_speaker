@@ -366,7 +366,7 @@ class CameraFragment : Fragment() {
         val fragmentManager: FragmentManager = requireActivity().supportFragmentManager
         val backStackEntryCount: Int = fragmentManager.backStackEntryCount
         for (i in 0 until backStackEntryCount) {
-            fragmentManager.popBackStack()
+            fragmentManager.popBackStackImmediate()
         }
     }
 
